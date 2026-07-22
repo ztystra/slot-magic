@@ -4,6 +4,9 @@ venv/
 __pycache__/
 *.pyc
 
+# Database
+*.db
+
 # Data
 data/
 *.json

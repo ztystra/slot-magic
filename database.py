@@ -106,77 +106,9 @@ class Database:
             cursor.execute("PRAGMA busy_timeout=30000")
             cursor.close()
 
-        self._migrate_legacy_slot_constraint()
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
-    def _migrate_legacy_slot_constraint(self):
-        """Replace the old constraint that permanently blocked cancelled slots."""
-        connection = self.engine.raw_connection()
-        try:
-            cursor = connection.cursor()
-            row = cursor.execute(
-                "SELECT sql FROM sqlite_master "
-                "WHERE type='table' AND name='bookings'"
-            ).fetchone()
-            if not row or "uq_slot" not in row[0]:
-                return
-
-            duplicate = cursor.execute(
-                "SELECT date, time, COUNT(*) FROM bookings "
-                "WHERE status='confirmed' GROUP BY date, time HAVING COUNT(*) > 1 "
-                "LIMIT 1"
-            ).fetchone()
-            if duplicate:
-                raise RuntimeError(
-                    "Cannot migrate bookings: multiple confirmed bookings use "
-                    f"the slot {duplicate[0]} {duplicate[1]}"
-                )
-
-            cursor.execute("PRAGMA foreign_keys=OFF")
-            cursor.executescript("""
-                BEGIN;
-                ALTER TABLE bookings RENAME TO bookings_legacy;
-                CREATE TABLE bookings (
-                    id VARCHAR(200) PRIMARY KEY,
-                    service_id VARCHAR(50) NOT NULL,
-                    date VARCHAR(10) NOT NULL,
-                    time VARCHAR(5) NOT NULL,
-                    client_name VARCHAR(200) NOT NULL,
-                    client_phone VARCHAR(50) NOT NULL,
-                    client_telegram_id INTEGER NOT NULL,
-                    status VARCHAR(20),
-                    created_at DATETIME,
-                    reminder_sent_24h BOOLEAN,
-                    reminder_sent_2h BOOLEAN,
-                    FOREIGN KEY(service_id) REFERENCES services (id)
-                );
-                INSERT INTO bookings (
-                    id, service_id, date, time, client_name, client_phone,
-                    client_telegram_id, status, created_at,
-                    reminder_sent_24h, reminder_sent_2h
-                )
-                SELECT
-                    id, service_id, date, time, client_name, client_phone,
-                    client_telegram_id, status, created_at,
-                    reminder_sent_24h, reminder_sent_2h
-                FROM bookings_legacy;
-                DROP TABLE bookings_legacy;
-                CREATE INDEX ix_bookings_client_telegram_id
-                    ON bookings (client_telegram_id);
-                CREATE UNIQUE INDEX uq_confirmed_slot
-                    ON bookings (date, time) WHERE status = 'confirmed';
-                COMMIT;
-                """)
-            cursor.execute("PRAGMA foreign_keys=ON")
-            connection.commit()
-        finally:
-            connection.rollback()
-            try:
-                connection.execute("PRAGMA foreign_keys=ON")
-            except Exception:
-                pass
-            connection.close()
 
     def get_session(self):
         """Получить сессию."""

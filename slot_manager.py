@@ -49,7 +49,7 @@ class SlotManager:
             }
 
     def get_available_slots(self, date: str, service_id: str) -> list:
-        """Получить доступные слоты на дату для услуги."""
+        """Получить доступные слоты на дату для услуги (batch query)."""
         service = self.get_service(service_id)
         if not service:
             return []
@@ -68,29 +68,26 @@ class SlotManager:
             end_time = work_day.end_time
             duration = service["duration_minutes"]
 
+            # Batch: все занятые слоты одним запросом
+            booked_times = {
+                row[0] for row in
+                session.query(Booking.time)
+                .filter(
+                    Booking.date == date,
+                    Booking.status == "confirmed",
+                )
+                .all()
+            }
+
             available = []
             current = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
             end = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
 
             while current + timedelta(minutes=duration) <= end:
                 time_str = current.strftime("%H:%M")
-
-                # Проверяем не занят ли слот
-                is_booked = (
-                    session.query(Booking)
-                    .filter(
-                        Booking.date == date,
-                        Booking.time == time_str,
-                        Booking.status == "confirmed",
-                    )
-                    .first()
-                    is not None
-                )
-
-                if not is_booked:
+                if time_str not in booked_times:  # O(1) проверка
                     available.append(time_str)
-
-                current += timedelta(minutes=30)  # шаг 30 минут
+                current += timedelta(minutes=30)
 
             return available
 
@@ -104,9 +101,19 @@ class SlotManager:
         client_telegram_id: int,
     ) -> Optional[dict]:
         """Создать запись."""
-        # Проверяем доступность
-        available = self.get_available_slots(date, service_id)
-        if time not in available:
+        # Проверяем доступность (прямой запрос, без полного сканирования слотов)
+        with self.db.get_session() as session:
+            already_booked = (
+                session.query(Booking)
+                .filter(
+                    Booking.date == date,
+                    Booking.time == time,
+                    Booking.status == "confirmed",
+                )
+                .first()
+                is not None
+            )
+        if already_booked:
             return None
 
         # Генерируем ID

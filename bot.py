@@ -3,26 +3,15 @@ Slot-Magic Bot — Telegram бот для записи на услуги.
 Работает для салонов красоты, стоматологий, автосервисов.
 """
 
-import os
 import logging
+import os
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    filters,
-)
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
+                      KeyboardButton, ReplyKeyboardMarkup, Update)
+from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
+                          ContextTypes, MessageHandler, filters)
 
 from slot_manager import SlotManager
 

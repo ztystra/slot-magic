@@ -4,10 +4,10 @@ Slot Manager — Управление расписанием и слотами.
 """
 
 import json
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass, asdict
 
 
 @dataclass

@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 
 
 @dataclass
@@ -226,8 +226,6 @@ class SlotManager:
         """Записи которым нужно отправить напоминание."""
         now = datetime.now()
         target = now + timedelta(hours=hours_before)
-        target_date = target.strftime("%Y-%m-%d")
-        target_time = target.strftime("%H:%M")
 
         need_reminder = []
         for b in self.bookings:

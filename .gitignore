@@ -1,0 +1,14 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+
+# Data
+data/
+*.json
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

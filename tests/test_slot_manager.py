@@ -216,8 +216,7 @@ class TestReminders:
 
     def test_get_bookings_needing_reminder(self, manager):
         """Записи для напоминания."""
-        # Создаём запись на текущий час (примерно через 2 часа)
-        now = datetime.now()
+        now = datetime(2026, 7, 22, 9, 0)
         target_time = now + timedelta(hours=2)
         target_date = target_time.strftime("%Y-%m-%d")
         target_hour = target_time.strftime("%H:00")
@@ -234,5 +233,21 @@ class TestReminders:
                 client_telegram_id=111111111,
             )
 
-            reminders = manager.get_bookings_needing_reminder(2)
+            reminders = manager.get_bookings_needing_reminder(2, now=now)
             assert len(reminders) > 0
+
+    def test_past_booking_does_not_trigger_reminder(self, manager):
+        """Прошедшая запись не должна получать запоздалое напоминание."""
+        now = datetime(2026, 7, 22, 11, 0)
+        manager.create_booking(
+            service_id="haircut",
+            date="2026-07-22",
+            time="09:00",
+            client_name="Тест",
+            client_phone="79990000000",
+            client_telegram_id=111111111,
+        )
+
+        reminders = manager.get_bookings_needing_reminder(2, now=now)
+
+        assert reminders == []

@@ -202,9 +202,11 @@ class SlotManager:
                 for b in bookings
             ]
 
-    def get_bookings_needing_reminder(self, hours_before: int) -> list:
+    def get_bookings_needing_reminder(
+        self, hours_before: int, now: datetime | None = None
+    ) -> list:
         """Записи которым нужно отправить напоминание."""
-        now = datetime.now()
+        now = now or datetime.now()
 
         need_reminder = []
         with self.db.get_session() as session:
@@ -218,7 +220,7 @@ class SlotManager:
                 )
 
                 # Проверяем что запись через ~hours_before часов
-                diff = abs((booking_datetime - now).total_seconds() / 3600)
+                diff = (booking_datetime - now).total_seconds() / 3600
 
                 if diff <= hours_before + 0.5 and diff >= hours_before - 0.5:
                     if hours_before == 24 and not b.reminder_sent_24h:

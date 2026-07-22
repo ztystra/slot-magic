@@ -297,7 +297,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts = data.split(":")
         service_id = parts[1]
         date = parts[2]
-        time = parts[3]
+        time = ":".join(parts[3:])  # "13:00" содержит двоеточие
 
         # Сохраняем состояние
         user_states[user_id] = {

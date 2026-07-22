@@ -318,7 +318,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Отмена записи
     if data.startswith("cancel:"):
-        booking_id = data.split(":")[1]
+        booking_id = data.split(":", 1)[1]  # только по первому двоеточию
 
         if manager.cancel_booking(booking_id):
             await query.edit_message_text("✅ Запись отменена.")

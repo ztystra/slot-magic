@@ -8,10 +8,21 @@ import os
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
-from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
-                      KeyboardButton, ReplyKeyboardMarkup, Update)
-from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
-                          ContextTypes, MessageHandler, filters)
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    Update,
+)
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 from slot_manager import SlotManager
 

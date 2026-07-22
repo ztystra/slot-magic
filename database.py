@@ -5,15 +5,15 @@ Database models for Slot-Magic using SQLAlchemy + SQLite.
 from datetime import datetime
 
 from sqlalchemy import (
-    create_engine,
-    Column,
-    String,
-    Float,
-    Integer,
     Boolean,
+    Column,
     DateTime,
+    Float,
     ForeignKey,
+    Integer,
+    String,
     Text,
+    create_engine,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 

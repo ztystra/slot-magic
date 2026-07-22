@@ -6,7 +6,7 @@ Slot Manager — Управление расписанием и слотами.
 from datetime import datetime, timedelta
 from typing import Optional
 
-from database import Database, Service, Booking, WorkHours
+from database import Booking, Database, Service, WorkHours
 
 
 class SlotManager:

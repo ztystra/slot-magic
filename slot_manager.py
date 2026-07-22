@@ -225,7 +225,6 @@ class SlotManager:
     def get_bookings_needing_reminder(self, hours_before: int) -> list:
         """Записи которым нужно отправить напоминание."""
         now = datetime.now()
-        target = now + timedelta(hours=hours_before)
 
         need_reminder = []
         for b in self.bookings:

@@ -13,6 +13,7 @@ from dataclasses import dataclass, asdict
 @dataclass
 class Service:
     """Услуга."""
+
     id: str
     name: str
     duration_minutes: int
@@ -23,6 +24,7 @@ class Service:
 @dataclass
 class TimeSlot:
     """Временной слот."""
+
     date: str  # YYYY-MM-DD
     time: str  # HH:MM
     service_id: str
@@ -34,6 +36,7 @@ class TimeSlot:
 @dataclass
 class Booking:
     """Запись."""
+
     id: str
     service_id: str
     date: str
@@ -72,10 +75,7 @@ class SlotManager:
 
     def _save(self, file: Path, data: list | dict):
         """Сохранить данные в файл."""
-        file.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+        file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def _default_services(self) -> list:
         """Услуги по умолчанию."""
@@ -126,9 +126,13 @@ class SlotManager:
         # Проверяем рабочий день
         day_name = datetime.strptime(date, "%Y-%m-%d").strftime("%A").lower()
         day_map = {
-            "monday": "monday", "tuesday": "tuesday",
-            "wednesday": "wednesday", "thursday": "thursday",
-            "friday": "friday", "saturday": "saturday", "sunday": "sunday"
+            "monday": "monday",
+            "tuesday": "tuesday",
+            "wednesday": "wednesday",
+            "thursday": "thursday",
+            "friday": "friday",
+            "saturday": "saturday",
+            "sunday": "sunday",
         }
         work_day = self.work_hours.get(day_map.get(day_name, ""), {})
         if not work_day.get("active", False):
@@ -148,8 +152,7 @@ class SlotManager:
 
             # Проверяем не занят ли слот
             is_booked = any(
-                b["date"] == date and b["time"] == time_str
-                and b["status"] == "confirmed"
+                b["date"] == date and b["time"] == time_str and b["status"] == "confirmed"
                 for b in self.bookings
             )
 
@@ -167,7 +170,7 @@ class SlotManager:
         time: str,
         client_name: str,
         client_phone: str,
-        client_telegram_id: int
+        client_telegram_id: int,
     ) -> Optional[Booking]:
         """Создать запись."""
         # Проверяем доступность
@@ -188,7 +191,7 @@ class SlotManager:
             client_phone=client_phone,
             client_telegram_id=client_telegram_id,
             status="confirmed",
-            created_at=datetime.now().isoformat()
+            created_at=datetime.now().isoformat(),
         )
 
         self.bookings.append(asdict(booking))
@@ -208,18 +211,15 @@ class SlotManager:
     def get_client_bookings(self, client_telegram_id: int) -> list:
         """Записи клиента."""
         return [
-            b for b in self.bookings
-            if b["client_telegram_id"] == client_telegram_id
-            and b["status"] == "confirmed"
+            b
+            for b in self.bookings
+            if b["client_telegram_id"] == client_telegram_id and b["status"] == "confirmed"
         ]
 
     def get_all_bookings(self, date: str = None) -> list:
         """Все записи (для админки)."""
         if date:
-            return [
-                b for b in self.bookings
-                if b["date"] == date and b["status"] == "confirmed"
-            ]
+            return [b for b in self.bookings if b["date"] == date and b["status"] == "confirmed"]
         return [b for b in self.bookings if b["status"] == "confirmed"]
 
     def get_bookings_needing_reminder(self, hours_before: int) -> list:
@@ -231,9 +231,7 @@ class SlotManager:
             if b["status"] != "confirmed":
                 continue
 
-            booking_datetime = datetime.strptime(
-                f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M"
-            )
+            booking_datetime = datetime.strptime(f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M")
 
             # Проверяем что запись через ~hours_before часов
             diff = abs((booking_datetime - now).total_seconds() / 3600)

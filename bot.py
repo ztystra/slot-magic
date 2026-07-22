@@ -9,12 +9,19 @@ from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 from telegram import (
-    Update, ReplyKeyboardMarkup, KeyboardButton,
-    InlineKeyboardButton, InlineKeyboardMarkup
+    Update,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
 )
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    CallbackQueryHandler, ContextTypes, filters
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    filters,
 )
 
 from slot_manager import SlotManager
@@ -24,8 +31,7 @@ load_dotenv()
 
 # Logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
@@ -41,9 +47,9 @@ def get_main_keyboard():
     return ReplyKeyboardMarkup(
         [
             [KeyboardButton("📅 Записаться"), KeyboardButton("📋 Мои записи")],
-            [KeyboardButton("❓ Помощь")]
+            [KeyboardButton("❓ Помощь")],
         ],
-        resize_keyboard=True
+        resize_keyboard=True,
     )
 
 
@@ -52,12 +58,14 @@ def get_services_keyboard():
     services = manager.get_services()
     buttons = []
     for s in services:
-        buttons.append([
-            InlineKeyboardButton(
-                f"{s['name']} — {s['price']}₽ ({s['duration_minutes']} мин)",
-                callback_data=f"service:{s['id']}"
-            )
-        ])
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    f"{s['name']} — {s['price']}₽ ({s['duration_minutes']} мин)",
+                    callback_data=f"service:{s['id']}",
+                )
+            ]
+        )
     return InlineKeyboardMarkup(buttons)
 
 
@@ -74,12 +82,14 @@ def get_dates_keyboard(service_id: str):
         # Проверяем есть ли свободные слоты
         slots = manager.get_available_slots(date_str, service_id)
         if slots:
-            buttons.append([
-                InlineKeyboardButton(
-                    f"{date_display} — {len(slots)} свободных",
-                    callback_data=f"date:{service_id}:{date_str}"
-                )
-            ])
+            buttons.append(
+                [
+                    InlineKeyboardButton(
+                        f"{date_display} — {len(slots)} свободных",
+                        callback_data=f"date:{service_id}:{date_str}",
+                    )
+                ]
+            )
 
     if not buttons:
         return None
@@ -98,10 +108,11 @@ def get_time_keyboard(service_id: str, date: str):
         row = []
         for j in range(2):
             if i + j < len(slots):
-                row.append(InlineKeyboardButton(
-                    slots[i + j],
-                    callback_data=f"time:{service_id}:{date}:{slots[i + j]}"
-                ))
+                row.append(
+                    InlineKeyboardButton(
+                        slots[i + j], callback_data=f"time:{service_id}:{date}:{slots[i + j]}"
+                    )
+                )
         buttons.append(row)
 
     return InlineKeyboardMarkup(buttons)
@@ -110,10 +121,9 @@ def get_time_keyboard(service_id: str, date: str):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /start."""
     await update.message.reply_text(
-        "✨ **Добро пожаловать в Slot-Magic!**\n\n"
-        "Выберите действие из меню 👇",
+        "✨ **Добро пожаловать в Slot-Magic!**\n\n" "Выберите действие из меню 👇",
         reply_markup=get_main_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )
 
 
@@ -130,7 +140,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Нажмите «📋 Мои записи» и выберите запись для отмены.\n\n"
         "**Напоминания:**\n"
         "Бот напомнит о записи за 24 часа и за 2 часа.",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )
 
 
@@ -140,10 +150,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if text == "📅 Записаться":
-        await update.message.reply_text(
-            "Выберите услугу:",
-            reply_markup=get_services_keyboard()
-        )
+        await update.message.reply_text("Выберите услугу:", reply_markup=get_services_keyboard())
         return
 
     if text == "📋 Мои записи":
@@ -156,12 +163,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             service = manager.get_service(b["service_id"])
             service_name = service["name"] if service else b["service_id"]
 
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton(
-                    "❌ Отменить",
-                    callback_data=f"cancel:{b['id']}"
-                )
-            ]])
+            keyboard = InlineKeyboardMarkup(
+                [[InlineKeyboardButton("❌ Отменить", callback_data=f"cancel:{b['id']}")]]
+            )
 
             await update.message.reply_text(
                 f"📋 **Запись:**\n\n"
@@ -170,7 +174,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"**Время:** {b['time']}\n"
                 f"**Статус:** {b['status']}",
                 reply_markup=keyboard,
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
         return
 
@@ -187,11 +191,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "service_id": state["service_id"],
             "date": state["date"],
             "time": state["time"],
-            "name": text
+            "name": text,
         }
-        await update.message.reply_text(
-            "Отлично! Теперь укажите ваш телефон:"
-        )
+        await update.message.reply_text("Отлично! Теперь укажите ваш телефон:")
         return
 
     if state.get("step") == "wait_phone":
@@ -202,7 +204,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             time=state["time"],
             client_name=state["name"],
             client_phone=text,
-            client_telegram_id=user_id
+            client_telegram_id=user_id,
         )
 
         # Очищаем состояние
@@ -219,19 +221,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"**Телефон:** {text}\n\n"
                 f"Бот напомнит о записи за 24 часа и за 2 часа.",
                 reply_markup=get_main_keyboard(),
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
         else:
             await update.message.reply_text(
                 "❌ Ошибка при создании записи. Возможно слот уже занят.",
-                reply_markup=get_main_keyboard()
+                reply_markup=get_main_keyboard(),
             )
         return
 
     # По умолчанию
     await update.message.reply_text(
-        "Используйте кнопки меню для навигации.",
-        reply_markup=get_main_keyboard()
+        "Используйте кнопки меню для навигации.", reply_markup=get_main_keyboard()
     )
 
 
@@ -256,10 +257,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         await query.edit_message_text(
-            f"Вы выбрали: **{service['name']}** — {service['price']}₽\n\n"
-            f"Выберите дату:",
+            f"Вы выбрали: **{service['name']}** — {service['price']}₽\n\n" f"Выберите дату:",
             reply_markup=keyboard,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -278,7 +278,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"📅 **{date_display}**\n\nВыберите время:",
             reply_markup=keyboard,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -294,15 +294,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "step": "wait_name",
             "service_id": service_id,
             "date": date,
-            "time": time
+            "time": time,
         }
 
         service = manager.get_service(service_id)
         await query.edit_message_text(
-            f"✅ **{service['name']}**\n"
-            f"📅 {date} в {time}\n\n"
-            f"Укажите ваше имя:",
-            parse_mode="Markdown"
+            f"✅ **{service['name']}**\n" f"📅 {date} в {time}\n\n" f"Укажите ваше имя:",
+            parse_mode="Markdown",
         )
         return
 
@@ -335,7 +333,7 @@ async def send_reminders(app):
                     f"**Дата:** {b['date']}\n"
                     f"**Время:** {b['time']}"
                 ),
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
         except Exception as e:
             logger.error(f"Failed to send 24h reminder: {e}")
@@ -355,7 +353,7 @@ async def send_reminders(app):
                     f"**Услуга:** {service_name}\n"
                     f"**Время:** {b['time']}"
                 ),
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
         except Exception as e:
             logger.error(f"Failed to send 2h reminder: {e}")
@@ -377,11 +375,7 @@ def main():
     app.add_handler(CallbackQueryHandler(callback_handler))
 
     # Reminders (каждые 15 минут)
-    app.job_queue.run_repeating(
-        send_reminders,
-        interval=900,  # 15 минут
-        first=60
-    )
+    app.job_queue.run_repeating(send_reminders, interval=900, first=60)  # 15 минут
 
     # Run
     print("🎰 Slot-Magic Bot started!")

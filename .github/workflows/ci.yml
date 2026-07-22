@@ -30,7 +30,7 @@ jobs:
         run: black --check bot.py slot_manager.py
       
       - name: Check imports
-        run: isort --check-only bot.py slot_manager.py
+        run: isort --profile black --check-only bot.py slot_manager.py
 
   docker:
     runs-on: ubuntu-latest

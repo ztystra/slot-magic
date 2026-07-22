@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
@@ -42,6 +43,7 @@ class Booking(Base):
     """Запись клиента."""
 
     __tablename__ = "bookings"
+    __table_args__ = (UniqueConstraint("date", "time", "service_id", name="uq_slot"),)
 
     id = Column(String(200), primary_key=True)
     service_id = Column(String(50), ForeignKey("services.id"), nullable=False)

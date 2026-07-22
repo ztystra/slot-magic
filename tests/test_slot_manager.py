@@ -140,20 +140,32 @@ class TestBookings:
 
     def test_cancel_booking(self, manager_with_bookings):
         """Отменить запись."""
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         bookings = manager_with_bookings.get_client_bookings(123456789)
         assert len(bookings) == 1
 
-        result = manager_with_bookings.cancel_booking(bookings[0]["id"])
+        result = manager_with_bookings.cancel_booking(bookings[0]["id"], 123456789)
         assert result is True
 
         # Проверяем что запись отменена
         bookings = manager_with_bookings.get_client_bookings(123456789)
         assert len(bookings) == 0
 
+    def test_cancel_booking_wrong_owner(self, manager_with_bookings):
+        """Отменить запись другого пользователя (IDOR)."""
+        bookings = manager_with_bookings.get_client_bookings(123456789)
+        assert len(bookings) == 1
+
+        # Пытаемся отменить чужую запись
+        result = manager_with_bookings.cancel_booking(bookings[0]["id"], 999999999)
+        assert result is False
+
+        # Проверяем что запись не отменена
+        bookings = manager_with_bookings.get_client_bookings(123456789)
+        assert len(bookings) == 1
+
     def test_cancel_booking_not_found(self, manager):
         """Отменить несуществующую запись."""
-        result = manager.cancel_booking("nonexistent")
+        result = manager.cancel_booking("nonexistent", 123456789)
         assert result is False
 
     def test_get_client_bookings(self, manager_with_bookings):

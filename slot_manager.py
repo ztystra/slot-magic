@@ -6,6 +6,8 @@ Slot Manager — Управление расписанием и слотами.
 from datetime import datetime, timedelta
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
+
 from database import Booking, Database, Service, WorkHours
 
 
@@ -124,7 +126,11 @@ class SlotManager:
                 created_at=datetime.now(),
             )
             session.add(booking)
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                return None  # Слот уже занят (race condition protection)
 
             return {
                 "id": booking.id,
@@ -137,11 +143,14 @@ class SlotManager:
                 "status": booking.status,
             }
 
-    def cancel_booking(self, booking_id: str) -> bool:
-        """Отменить запись."""
+    def cancel_booking(self, booking_id: str, client_telegram_id: int) -> bool:
+        """Отменить запись (только свою)."""
         with self.db.get_session() as session:
             booking = session.query(Booking).filter(Booking.id == booking_id).first()
             if not booking:
+                return False
+            # IDOR protection: проверяем владельца
+            if booking.client_telegram_id != client_telegram_id:
                 return False
             booking.status = "cancelled"
             session.commit()

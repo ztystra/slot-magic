@@ -110,7 +110,8 @@ def get_time_keyboard(service_id: str, date: str):
             if i + j < len(slots):
                 row.append(
                     InlineKeyboardButton(
-                        slots[i + j], callback_data=f"time:{service_id}:{date}:{slots[i + j]}"
+                        slots[i + j],
+                        callback_data=f"time:{service_id}:{date}:{slots[i + j]}",
                     )
                 )
         buttons.append(row)
@@ -150,7 +151,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if text == "📅 Записаться":
-        await update.message.reply_text("Выберите услугу:", reply_markup=get_services_keyboard())
+        await update.message.reply_text(
+            "Выберите услугу:", reply_markup=get_services_keyboard()
+        )
         return
 
     if text == "📋 Мои записи":
@@ -164,7 +167,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             service_name = service["name"] if service else b["service_id"]
 
             keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton("❌ Отменить", callback_data=f"cancel:{b['id']}")]]
+                [
+                    [
+                        InlineKeyboardButton(
+                            "❌ Отменить", callback_data=f"cancel:{b['id']}"
+                        )
+                    ]
+                ]
             )
 
             await update.message.reply_text(
@@ -257,7 +266,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         await query.edit_message_text(
-            f"Вы выбрали: **{service['name']}** — {service['price']}₽\n\n" f"Выберите дату:",
+            f"Вы выбрали: **{service['name']}** — {service['price']}₽\n\n"
+            f"Выберите дату:",
             reply_markup=keyboard,
             parse_mode="Markdown",
         )
@@ -299,7 +309,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         service = manager.get_service(service_id)
         await query.edit_message_text(
-            f"✅ **{service['name']}**\n" f"📅 {date} в {time}\n\n" f"Укажите ваше имя:",
+            f"✅ **{service['name']}**\n"
+            f"📅 {date} в {time}\n\n"
+            f"Укажите ваше имя:",
             parse_mode="Markdown",
         )
         return

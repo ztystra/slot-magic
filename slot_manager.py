@@ -75,7 +75,9 @@ class SlotManager:
 
     def _save(self, file: Path, data: list | dict):
         """Сохранить данные в файл."""
-        file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        file.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def _default_services(self) -> list:
         """Услуги по умолчанию."""
@@ -152,7 +154,9 @@ class SlotManager:
 
             # Проверяем не занят ли слот
             is_booked = any(
-                b["date"] == date and b["time"] == time_str and b["status"] == "confirmed"
+                b["date"] == date
+                and b["time"] == time_str
+                and b["status"] == "confirmed"
                 for b in self.bookings
             )
 
@@ -213,13 +217,18 @@ class SlotManager:
         return [
             b
             for b in self.bookings
-            if b["client_telegram_id"] == client_telegram_id and b["status"] == "confirmed"
+            if b["client_telegram_id"] == client_telegram_id
+            and b["status"] == "confirmed"
         ]
 
     def get_all_bookings(self, date: str = None) -> list:
         """Все записи (для админки)."""
         if date:
-            return [b for b in self.bookings if b["date"] == date and b["status"] == "confirmed"]
+            return [
+                b
+                for b in self.bookings
+                if b["date"] == date and b["status"] == "confirmed"
+            ]
         return [b for b in self.bookings if b["status"] == "confirmed"]
 
     def get_bookings_needing_reminder(self, hours_before: int) -> list:
@@ -231,7 +240,9 @@ class SlotManager:
             if b["status"] != "confirmed":
                 continue
 
-            booking_datetime = datetime.strptime(f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M")
+            booking_datetime = datetime.strptime(
+                f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M"
+            )
 
             # Проверяем что запись через ~hours_before часов
             diff = abs((booking_datetime - now).total_seconds() / 3600)

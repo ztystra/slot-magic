@@ -5,8 +5,15 @@ Database models for Slot-Magic using SQLAlchemy + SQLite.
 from datetime import datetime
 
 from sqlalchemy import (
-    create_engine, Column, String, Float, Integer,
-    Boolean, DateTime, ForeignKey, Text
+    create_engine,
+    Column,
+    String,
+    Float,
+    Integer,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Text,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
@@ -90,22 +97,62 @@ class Database:
                 return
 
             default_services = [
-                Service(id="haircut", name="Стрижка", duration_minutes=30, price=800,
-                        description="Мужская/женская стрижка"),
-                Service(id="coloring", name="Окрашивание", duration_minutes=120, price=3000,
-                        description="Полное окрашивание волос"),
-                Service(id="manicure", name="Маникюр", duration_minutes=60, price=1200,
-                        description="Классический маникюр"),
-                Service(id="pedicure", name="Педикюр", duration_minutes=90, price=1800,
-                        description="Классический педикюр"),
-                Service(id="shaving", name="Бритьё", duration_minutes=20, price=500,
-                        description="Классическое бритьё бороды"),
-                Service(id="beard", name="Оформление бороды", duration_minutes=30, price=600,
-                        description="Подрезание и оформление"),
-                Service(id="wash", name="Мытьё + укладка", duration_minutes=40, price=900,
-                        description="Мытьё и укладка волос"),
-                Service(id="complex", name="Комплекс", duration_minutes=60, price=1500,
-                        description="Стрижка + мытьё + укладка"),
+                Service(
+                    id="haircut",
+                    name="Стрижка",
+                    duration_minutes=30,
+                    price=800,
+                    description="Мужская/женская стрижка",
+                ),
+                Service(
+                    id="coloring",
+                    name="Окрашивание",
+                    duration_minutes=120,
+                    price=3000,
+                    description="Полное окрашивание волос",
+                ),
+                Service(
+                    id="manicure",
+                    name="Маникюр",
+                    duration_minutes=60,
+                    price=1200,
+                    description="Классический маникюр",
+                ),
+                Service(
+                    id="pedicure",
+                    name="Педикюр",
+                    duration_minutes=90,
+                    price=1800,
+                    description="Классический педикюр",
+                ),
+                Service(
+                    id="shaving",
+                    name="Бритьё",
+                    duration_minutes=20,
+                    price=500,
+                    description="Классическое бритьё бороды",
+                ),
+                Service(
+                    id="beard",
+                    name="Оформление бороды",
+                    duration_minutes=30,
+                    price=600,
+                    description="Подрезание и оформление",
+                ),
+                Service(
+                    id="wash",
+                    name="Мытьё + укладка",
+                    duration_minutes=40,
+                    price=900,
+                    description="Мытьё и укладка волос",
+                ),
+                Service(
+                    id="complex",
+                    name="Комплекс",
+                    duration_minutes=60,
+                    price=1500,
+                    description="Стрижка + мытьё + укладка",
+                ),
             ]
 
             session.add_all(default_services)
@@ -118,13 +165,48 @@ class Database:
                 return
 
             default_hours = [
-                WorkHours(day_name="monday", start_time="09:00", end_time="19:00", is_active=True),
-                WorkHours(day_name="tuesday", start_time="09:00", end_time="19:00", is_active=True),
-                WorkHours(day_name="wednesday", start_time="09:00", end_time="19:00", is_active=True),
-                WorkHours(day_name="thursday", start_time="09:00", end_time="19:00", is_active=True),
-                WorkHours(day_name="friday", start_time="09:00", end_time="19:00", is_active=True),
-                WorkHours(day_name="saturday", start_time="10:00", end_time="17:00", is_active=True),
-                WorkHours(day_name="sunday", start_time="00:00", end_time="00:00", is_active=False),
+                WorkHours(
+                    day_name="monday",
+                    start_time="09:00",
+                    end_time="19:00",
+                    is_active=True,
+                ),
+                WorkHours(
+                    day_name="tuesday",
+                    start_time="09:00",
+                    end_time="19:00",
+                    is_active=True,
+                ),
+                WorkHours(
+                    day_name="wednesday",
+                    start_time="09:00",
+                    end_time="19:00",
+                    is_active=True,
+                ),
+                WorkHours(
+                    day_name="thursday",
+                    start_time="09:00",
+                    end_time="19:00",
+                    is_active=True,
+                ),
+                WorkHours(
+                    day_name="friday",
+                    start_time="09:00",
+                    end_time="19:00",
+                    is_active=True,
+                ),
+                WorkHours(
+                    day_name="saturday",
+                    start_time="10:00",
+                    end_time="17:00",
+                    is_active=True,
+                ),
+                WorkHours(
+                    day_name="sunday",
+                    start_time="00:00",
+                    end_time="00:00",
+                    is_active=False,
+                ),
             ]
 
             session.add_all(default_hours)

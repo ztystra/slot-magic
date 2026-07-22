@@ -55,7 +55,9 @@ class SlotManager:
         with self.db.get_session() as session:
             # Проверяем рабочий день
             day_name = datetime.strptime(date, "%Y-%m-%d").strftime("%A").lower()
-            work_day = session.query(WorkHours).filter(WorkHours.day_name == day_name).first()
+            work_day = (
+                session.query(WorkHours).filter(WorkHours.day_name == day_name).first()
+            )
             if not work_day or not work_day.is_active:
                 return []
 
@@ -198,9 +200,7 @@ class SlotManager:
         need_reminder = []
         with self.db.get_session() as session:
             bookings = (
-                session.query(Booking)
-                .filter(Booking.status == "confirmed")
-                .all()
+                session.query(Booking).filter(Booking.status == "confirmed").all()
             )
 
             for b in bookings:

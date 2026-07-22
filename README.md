@@ -3,181 +3,138 @@
 [![CI](https://github.com/ztystra/slot-magic/actions/workflows/ci.yml/badge.svg)](https://github.com/ztystra/slot-magic/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Telegram Bot API](https://img.shields.io/badge/Telegram-Bot%20API-26A5E4.svg)](https://core.telegram.org/bots/api)
 
-> **Telegram-бот для записи на услуги — салоны красоты, стоматологии, автосервисы.**  
-> Клиент выбирает услугу → дату → время → записывается. Бот напоминает.
+Telegram-бот для онлайн-записи и веб-панель владельца бизнеса. Один экземпляр подходит для салона, стоматологии, автосервиса или частного специалиста.
 
----
+> **Статус:** рабочий MVP для демонстрации и пилотного запуска. Для высоконагруженного production нужны PostgreSQL, HTTPS/reverse proxy и резервное копирование.
 
-## 🎯 Что это?
+## Возможности
 
-Slot-Magic — это готовый к продакшну Telegram-бот для автоматизации записи на услуги. Работает для любой сферы услуг: салоны красоты, стоматологии, автосервисы, клиники, студии.
+### Для клиента в Telegram
 
-### Зачем это нужно?
+- выбор услуги, даты и свободного времени;
+- создание и отмена собственной записи;
+- защита от двойной записи на один слот;
+- напоминания за 24 часа и 2 часа.
 
-| Без Slot-Magic | С Slot-Magic |
-|----------------|--------------|
-| Клиент звонит, ждёт ответа | Бот принимает 24/7 мгновенно |
-| Менеджер ведёт расписание в Excel | Автоматическое расписание |
-| Забывают про напоминания | Бот напоминает за 24ч и за 2ч |
-| Теряют клиентов из-за занятости | Клиент видит свободные слоты |
+### Для владельца в веб-панели
 
----
+- JWT-авторизация без встроенных дефолтных паролей;
+- статистика по записям и популярным услугам;
+- фильтр записей по дате;
+- перевод записи в `completed` или `cancelled`;
+- создание, изменение и удаление услуг;
+- настройка рабочих часов.
 
-## ✨ Возможности
+Бот и админка работают с одной SQLite-базой через SQLAlchemy. Изменённая в панели услуга сразу доступна в боте.
 
-- 📅 **Автоматическая запись** — клиент выбирает услугу, дату, время
-- 📋 **Управление расписанием** — настройка рабочих часов и услуг
-- ⏰ **Напоминания** — за 24 часа и за 2 часа до записи
-- ❌ **Отмена записей** — клиент может отменить через бота
-- 💰 **Цены и длительность** — каждая услуга с ценой и временем
-- 📊 **Админка** — просмотр всех записей (для владельца)
-- 🔄 **Автоматическое обновление** — слоты обновляются в реальном времени
-
----
-
-## 🚀 Быстрый старт
-
-### 1. Клонируйте
+## Быстрый старт
 
 ```bash
 git clone https://github.com/ztystra/slot-magic.git
 cd slot-magic
-```
-
-### 2. Установите зависимости
-
-```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 3. Настройте
-
-```bash
 cp .env.example .env
 ```
 
-Отредактируйте `.env` — вставьте токен бота:
+Заполните `.env`:
 
 ```env
-TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_BOT_TOKEN=your_bot_token
+SQLITE_DB_PATH=slot_magic.db
+ADMIN_USERNAME=owner
+ADMIN_PASSWORD=use-a-long-random-password
+JWT_SECRET=use-at-least-32-random-characters
 ```
 
-### 4. Запустите
+Секрет для JWT можно создать командой:
+
+```bash
+openssl rand -hex 32
+```
+
+### Запуск бота
 
 ```bash
 python bot.py
 ```
 
----
+### Запуск админки
 
-## 📖 Как пользоваться
-
-### Клиент
-
-1. Нажимает «📅 Записаться»
-2. Выбирает услугу из списка
-3. Выбирает дату (ближайшие 7 дней)
-4. Выбирает свободное время
-5. Указывает имя и телефон
-6. Получает подтверждение
-
-### Напоминания
-
-- За 24 часа: «Завтра у вас запись на стрижку в 14:00»
-- За 2 часа: «Скоро у вас запись на стрижку в 14:00»
-
-### Отмена
-
-1. Нажимает «📋 Мои записи»
-2. Выбирает запись
-3. Нажимает «❌ Отменить»
-
----
-
-## 🏗 Архитектура
-
+```bash
+uvicorn admin.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
+
+Откройте [http://127.0.0.1:8000](http://127.0.0.1:8000) и войдите данными `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+
+## Docker Compose
+
+Оба сервиса используют файл `./data/slot_magic.db`:
+
+```bash
+docker compose up --build
+```
+
+- Telegram-бот: работает в фоне;
+- админка: `http://localhost:8000`.
+
+Не публикуйте порт 8000 напрямую в интернет. Перед внешним запуском поставьте Caddy/Nginx с HTTPS и ограничением частоты запросов к `/api/auth/login`.
+
+## API
+
+После запуска документация доступна по адресу `http://127.0.0.1:8000/docs`.
+
+Основные маршруты:
+
+| Метод | Маршрут | Назначение |
+|---|---|---|
+| `POST` | `/api/auth/login` | получить JWT |
+| `GET` | `/api/bookings` | список записей |
+| `PATCH` | `/api/bookings/{id}/status` | изменить статус |
+| `GET/POST` | `/api/services` | список/создание услуг |
+| `PUT/DELETE` | `/api/services/{id}` | изменение/удаление услуги |
+| `GET/PUT` | `/api/work-hours/{day}` | рабочие часы |
+| `GET` | `/api/stats` | статистика |
+| `GET` | `/api/health` | health check |
+
+Все маршруты кроме login и health требуют `Authorization: Bearer <token>`.
+
+## Тесты и проверки
+
+```bash
+pytest tests/ -v
+black --check bot.py slot_manager.py database.py admin tests
+isort --profile black --check-only bot.py slot_manager.py database.py admin tests
+flake8 bot.py slot_manager.py database.py admin tests --max-line-length=100 --ignore=E501,W503
+```
+
+Тесты покрывают работу слотов, IDOR-защиту отмены, повторную запись после отмены, миграцию старой схемы, авторизацию и CRUD API админки.
+
+## Архитектура
+
+```text
 slot-magic/
-├── bot.py              # Telegram-бот (обработчики команд)
-├── slot_manager.py     # Менеджер слотов и записей
-├── data/               # Данные (создаётся автоматически)
-│   ├── services.json   # Услуги
-│   ├── bookings.json   # Записи
-│   └── work_hours.json # Рабочие часы
-├── requirements.txt    # Зависимости
-├── .env.example        # Шаблон конфигурации
-├── .github/            # CI/CD и шаблоны
-├── CONTRIBUTING.md     # Гайд для контрибьюторов
-├── SECURITY.md         # Политика безопасности
-├── CHANGELOG.md        # История изменений
-└── README.md           # Эта документация
+├── bot.py                    # Telegram UI
+├── slot_manager.py           # бизнес-логика записи
+├── database.py               # SQLAlchemy models + migration
+├── admin/
+│   ├── main.py               # FastAPI + auth + API
+│   └── frontend/index.html   # React dashboard без build-step
+├── tests/                    # unit/integration tests
+├── Dockerfile
+└── docker-compose.yml
 ```
 
----
+## Ограничения MVP
 
-## 🔧 Конфигурация
+- SQLite подходит одному филиалу и умеренной нагрузке, но не горизонтальному масштабированию;
+- один экземпляр приложения обслуживает одну организацию;
+- платежи и мульти-тенантность пока не реализованы;
+- React загружается с CDN, поэтому для полностью автономного production-деплоя нужен собранный frontend bundle;
+- rate limiting логина должен выполняться reverse proxy или API gateway.
 
-### Услуги
+## Лицензия
 
-Услуги настраиваются в `data/services.json`:
-
-```json
-[
-  {
-    "id": "haircut",
-    "name": "Стрижка",
-    "duration_minutes": 30,
-    "price": 800,
-    "description": "Мужская/женская стрижка"
-  }
-]
-```
-
-### Рабочие часы
-
-Рабочие часы настраиваются в `data/work_hours.json`:
-
-```json
-{
-  "monday": {"start": "09:00", "end": "19:00", "active": true},
-  "sunday": {"start": "00:00", "end": "00:00", "active": false}
-}
-```
-
----
-
-## 💰 Стоимость
-
-| Компонент | Стоимость |
-|-----------|-----------|
-| Telegram Bot | Бесплатно |
-| Хостинг | $5/мес (VPS) |
-| Домен | ~500₽/год (опционально) |
-
-**Итого:** ~300₽/мес для работы бота.
-
----
-
-## 🤝 Контрибьюция
-
-Смотри [CONTRIBUTING.md](CONTRIBUTING.md) для подробностей.
-
----
-
-## 📝 Лицензия
-
-[MIT License](LICENSE) — используйте как угодно.
-
----
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=ztystra/slot-magic&type=Date)](https://star-history.com/#ztystra/slot-magic&Date)
-
----
-
-**Сделано с 💜 [Меру](https://github.com/ztystra)**
+[MIT](LICENSE)

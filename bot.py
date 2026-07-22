@@ -35,8 +35,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Slot Manager
-manager = SlotManager()
+# Bot and admin panel must point to the same database file.
+manager = SlotManager(os.getenv("SQLITE_DB_PATH", "slot_magic.db"))
 
 # User states
 user_states = {}  # user_id -> current state

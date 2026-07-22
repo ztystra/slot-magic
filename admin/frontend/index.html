@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot-Magic Admin</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header {
+            background: #16213e;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { color: #a855f7; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #a855f7; color: white; }
+        .btn-primary:hover { background: #9333ea; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-success:hover { background: #16a34a; }
+        .card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value { font-size: 32px; font-weight: bold; color: #a855f7; }
+        .stat-label { color: #888; margin-top: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #1a1a2e; color: #a855f7; }
+        tr:hover { background: #1a1a2e; }
+        .status-confirmed { color: #22c55e; }
+        .status-cancelled { color: #ef4444; }
+        .status-completed { color: #3b82f6; }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90%;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #888; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 14px;
+        }
+        .form-group textarea { min-height: 90px; resize: vertical; }
+        .form-group input:disabled { opacity: 0.6; cursor: not-allowed; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px;
+            background: #16213e;
+            border: none;
+            border-radius: 6px;
+            color: #888;
+            cursor: pointer;
+        }
+        .tab.active { background: #a855f7; color: white; }
+        .loading { text-align: center; padding: 40px; color: #888; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const API_URL = window.location.origin + '/api';
+
+        // Auth context
+        const AuthContext = React.createContext();
+
+        function AuthProvider({ children }) {
+            const [token, setToken] = React.useState(localStorage.getItem('token'));
+            const [user, setUser] = React.useState(null);
+
+            const login = async (username, password) => {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+                if (!res.ok) throw new Error('Login failed');
+                const data = await res.json();
+                localStorage.setItem('token', data.access_token);
+                setToken(data.access_token);
+                setUser(username);
+            };
+
+            const logout = () => {
+                localStorage.removeItem('token');
+                setToken(null);
+                setUser(null);
+            };
+
+            return (
+                <AuthContext.Provider value={{ token, user, login, logout }}>
+                    {children}
+                </AuthContext.Provider>
+            );
+        }
+
+        // API helper
+        async function api(endpoint, options = {}) {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    ...options.headers,
+                },
+            });
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.reload();
+            }
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || 'API error');
+            }
+            return res.json();
+        }
+
+        // Login page
+        function LoginPage() {
+            const { login } = React.useContext(AuthContext);
+            const [username, setUsername] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [error, setError] = React.useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                try {
+                    await login(username, password);
+                } catch (err) {
+                    setError('Неверный логин или пароль');
+                }
+            };
+
+            return (
+                <div className="container" style={{ maxWidth: 400, marginTop: 100 }}>
+                    <div className="card">
+                        <h2 style={{ textAlign: 'center', marginBottom: 24, color: '#a855f7' }}>
+                            🎰 Slot-Magic Admin
+                        </h2>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>Логин</label>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={e => setUsername(e.target.value)}
+                                    placeholder="admin"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Пароль</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            {error && <p style={{ color: '#ef4444', marginBottom: 16 }}>{error}</p>}
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+                                Войти
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Stats card
+        function StatCard({ value, label }) {
+            return (
+                <div className="stat-card">
+                    <div className="stat-value">{value}</div>
+                    <div className="stat-label">{label}</div>
+                </div>
+            );
+        }
+
+        // Bookings table
+        function BookingsTable({ bookings, onStatusChange }) {
+            const formatDate = (date) => {
+                const d = new Date(date);
+                return d.toLocaleDateString('ru-RU');
+            };
+
+            return (
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Время</th>
+                            <th>Клиент</th>
+                            <th>Телефон</th>
+                            <th>Услуга</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {bookings.map(b => (
+                            <tr key={b.id}>
+                                <td>{formatDate(b.date)}</td>
+                                <td>{b.time}</td>
+                                <td>{b.client_name}</td>
+                                <td>{b.client_phone}</td>
+                                <td>{b.service_id}</td>
+                                <td className={`status-${b.status}`}>{b.status}</td>
+                                <td>
+                                    {b.status === 'confirmed' && (
+                                        <>
+                                            <button
+                                                className="btn btn-success"
+                                                style={{ marginRight: 8 }}
+                                                onClick={() => onStatusChange(b.id, 'completed')}
+                                            >
+                                                ✓ Выполнено
+                                            </button>
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() => onStatusChange(b.id, 'cancelled')}
+                                            >
+                                                ✕ Отменить
+                                            </button>
+                                        </>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        // Main dashboard
+        function Dashboard() {
+            const { logout } = React.useContext(AuthContext);
+            const [tab, setTab] = React.useState('bookings');
+            const [stats, setStats] = React.useState(null);
+            const [bookings, setBookings] = React.useState([]);
+            const [services, setServices] = React.useState([]);
+            const [loading, setLoading] = React.useState(true);
+            const [selectedDate, setSelectedDate] = React.useState('');
+            const [editingService, setEditingService] = React.useState(null);
+            const [serviceFormOpen, setServiceFormOpen] = React.useState(false);
+
+            React.useEffect(() => {
+                loadData();
+            }, []);
+
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    const [statsData, bookingsData, servicesData] = await Promise.all([
+                        api('/stats'),
+                        api('/bookings'),
+                        api('/services'),
+                    ]);
+                    setStats(statsData);
+                    setBookings(bookingsData);
+                    setServices(servicesData);
+                } catch (err) {
+                    console.error('Error loading data:', err);
+                }
+                setLoading(false);
+            };
+
+            const handleStatusChange = async (bookingId, newStatus) => {
+                try {
+                    await api(`/bookings/${bookingId}/status`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ status: newStatus }),
+                    });
+                    await loadData();
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                }
+            };
+
+            const openCreateService = () => {
+                setEditingService(null);
+                setServiceFormOpen(true);
+            };
+
+            const openEditService = service => {
+                setEditingService(service);
+                setServiceFormOpen(true);
+            };
+
+            const saveService = async service => {
+                const isEditing = Boolean(editingService);
+                await api(isEditing ? `/services/${editingService.id}` : '/services', {
+                    method: isEditing ? 'PUT' : 'POST',
+                    body: JSON.stringify(service),
+                });
+                setServiceFormOpen(false);
+                setEditingService(null);
+                await loadData();
+            };
+
+            const deleteService = async service => {
+                if (!window.confirm(`Удалить услугу «${service.name}»?`)) return;
+                try {
+                    await api(`/services/${service.id}`, { method: 'DELETE' });
+                    await loadData();
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                }
+            };
+
+            if (loading) return <div className="loading">Загрузка...</div>;
+
+            return (
+                <div className="container">
+                    <header>
+                        <h1>🎰 Slot-Magic Admin</h1>
+                        <button className="btn btn-danger" onClick={logout}>Выйти</button>
+                    </header>
+
+                    {/* Stats */}
+                    {stats && (
+                        <div className="stats-grid">
+                            <StatCard value={stats.total_bookings} label="Всего записей" />
+                            <StatCard value={stats.today_bookings} label="Сегодня" />
+                            <StatCard value={stats.week_bookings} label="За неделю" />
+                            <StatCard value={stats.services_count} label="Услуг" />
+                        </div>
+                    )}
+
+                    {/* Tabs */}
+                    <div className="tabs">
+                        <button
+                            className={`tab ${tab === 'bookings' ? 'active' : ''}`}
+                            onClick={() => setTab('bookings')}
+                        >
+                            📋 Записи
+                        </button>
+                        <button
+                            className={`tab ${tab === 'services' ? 'active' : ''}`}
+                            onClick={() => setTab('services')}
+                        >
+                            💇 Услуги
+                        </button>
+                        <button
+                            className={`tab ${tab === 'workhours' ? 'active' : ''}`}
+                            onClick={() => setTab('workhours')}
+                        >
+                            🕐 Часы работы
+                        </button>
+                    </div>
+
+                    {/* Bookings tab */}
+                    {tab === 'bookings' && (
+                        <div className="card">
+                            <div style={{ marginBottom: 16 }}>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={e => setSelectedDate(e.target.value)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: 6,
+                                        border: '1px solid #333',
+                                        background: '#1a1a2e',
+                                        color: '#eee',
+                                    }}
+                                />
+                                <button
+                                    className="btn btn-primary"
+                                    style={{ marginLeft: 8 }}
+                                    onClick={() => {
+                                        const url = selectedDate
+                                            ? `/bookings?date=${selectedDate}`
+                                            : '/bookings';
+                                        api(url).then(setBookings);
+                                    }}
+                                >
+                                    Фильтр
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{ marginLeft: 8, background: '#333', color: '#eee' }}
+                                    onClick={() => {
+                                        setSelectedDate('');
+                                        api('/bookings').then(setBookings);
+                                    }}
+                                >
+                                    Сбросить
+                                </button>
+                            </div>
+                            <BookingsTable bookings={bookings} onStatusChange={handleStatusChange} />
+                        </div>
+                    )}
+
+                    {/* Services tab */}
+                    {tab === 'services' && (
+                        <div className="card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                <p style={{ color: '#888' }}>Услуги доступны клиентам в Telegram-боте сразу после сохранения.</p>
+                                <button className="btn btn-primary" onClick={openCreateService}>+ Добавить услугу</button>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Название</th>
+                                        <th>Длительность</th>
+                                        <th>Цена</th>
+                                        <th>Описание</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {services.map(s => (
+                                        <tr key={s.id}>
+                                            <td>{s.id}</td>
+                                            <td>{s.name}</td>
+                                            <td>{s.duration_minutes} мин</td>
+                                            <td>{s.price} ₽</td>
+                                            <td>{s.description}</td>
+                                            <td>
+                                                <button className="btn btn-primary" onClick={() => openEditService(s)}>Изменить</button>
+                                                <button
+                                                    className="btn btn-danger"
+                                                    style={{ marginLeft: 8 }}
+                                                    onClick={() => deleteService(s)}
+                                                >
+                                                    Удалить
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {serviceFormOpen && (
+                        <ServiceForm
+                            service={editingService}
+                            onSave={saveService}
+                            onClose={() => {
+                                setServiceFormOpen(false);
+                                setEditingService(null);
+                            }}
+                        />
+                    )}
+
+                    {/* Work hours tab */}
+                    {tab === 'workhours' && (
+                        <div className="card">
+                            <p style={{ color: '#888', marginBottom: 16 }}>
+                                Настройте рабочие часы для каждого дня недели
+                            </p>
+                            <WorkHoursEditor />
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function ServiceForm({ service, onSave, onClose }) {
+            const [form, setForm] = React.useState({
+                id: service?.id || '',
+                name: service?.name || '',
+                duration_minutes: service?.duration_minutes || 30,
+                price: service?.price || 0,
+                description: service?.description || '',
+            });
+            const [saving, setSaving] = React.useState(false);
+            const [error, setError] = React.useState('');
+
+            const change = (field, value) => setForm(current => ({ ...current, [field]: value }));
+
+            const submit = async event => {
+                event.preventDefault();
+                setSaving(true);
+                setError('');
+                const payload = {
+                    name: form.name.trim(),
+                    duration_minutes: Number(form.duration_minutes),
+                    price: Number(form.price),
+                    description: form.description.trim(),
+                };
+                if (!service) payload.id = form.id.trim();
+                try {
+                    await onSave(payload);
+                } catch (err) {
+                    setError(err.message);
+                    setSaving(false);
+                }
+            };
+
+            return (
+                <div className="modal" onMouseDown={event => event.target === event.currentTarget && onClose()}>
+                    <div className="modal-content">
+                        <h2 style={{ marginBottom: 20, color: '#a855f7' }}>
+                            {service ? 'Изменить услугу' : 'Новая услуга'}
+                        </h2>
+                        <form onSubmit={submit}>
+                            <div className="form-group">
+                                <label>ID (латиница, цифры, - и _)</label>
+                                <input
+                                    required
+                                    pattern="[a-z0-9][a-z0-9_-]{1,49}"
+                                    disabled={Boolean(service)}
+                                    value={form.id}
+                                    onChange={event => change('id', event.target.value)}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Название</label>
+                                <input required maxLength="200" value={form.name} onChange={event => change('name', event.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label>Длительность, минут</label>
+                                <input type="number" required min="1" max="1440" value={form.duration_minutes} onChange={event => change('duration_minutes', event.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label>Цена, ₽</label>
+                                <input type="number" required min="0" step="0.01" value={form.price} onChange={event => change('price', event.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label>Описание</label>
+                                <textarea maxLength="2000" value={form.description} onChange={event => change('description', event.target.value)} />
+                            </div>
+                            {error && <p style={{ color: '#ef4444', marginBottom: 16 }}>{error}</p>}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                <button type="button" className="btn" style={{ background: '#333', color: '#eee' }} onClick={onClose}>Отмена</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? 'Сохраняю…' : 'Сохранить'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Work hours editor
+        function WorkHoursEditor() {
+            const [hours, setHours] = React.useState([]);
+            const dayNames = {
+                monday: 'Понедельник',
+                tuesday: 'Вторник',
+                wednesday: 'Среда',
+                thursday: 'Четверг',
+                friday: 'Пятница',
+                saturday: 'Суббота',
+                sunday: 'Воскресенье',
+            };
+
+            React.useEffect(() => {
+                api('/work-hours').then(setHours);
+            }, []);
+
+            const handleSave = async (dayName, data) => {
+                try {
+                    await api(`/work-hours/${dayName}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(data),
+                    });
+                    const updated = await api('/work-hours');
+                    setHours(updated);
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                }
+            };
+
+            return (
+                <table>
+                    <thead>
+                        <tr>
+                            <th>День</th>
+                            <th>Начало</th>
+                            <th>Конец</th>
+                            <th>Активен</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {hours.map(h => (
+                            <WorkHoursRow
+                                key={h.day_name}
+                                dayName={h.day_name}
+                                dayLabel={dayNames[h.day_name]}
+                                data={h}
+                                onSave={handleSave}
+                            />
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        function WorkHoursRow({ dayName, dayLabel, data, onSave }) {
+            const [start, setStart] = React.useState(data.start_time);
+            const [end, setEnd] = React.useState(data.end_time);
+            const [active, setActive] = React.useState(data.is_active);
+
+            return (
+                <tr>
+                    <td>{dayLabel}</td>
+                    <td>
+                        <input
+                            type="time"
+                            value={start}
+                            onChange={e => setStart(e.target.value)}
+                            style={{ padding: 6, borderRadius: 4, border: '1px solid #333', background: '#1a1a2e', color: '#eee' }}
+                        />
+                    </td>
+                    <td>
+                        <input
+                            type="time"
+                            value={end}
+                            onChange={e => setEnd(e.target.value)}
+                            style={{ padding: 6, borderRadius: 4, border: '1px solid #333', background: '#1a1a2e', color: '#eee' }}
+                        />
+                    </td>
+                    <td>
+                        <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={e => setActive(e.target.checked)}
+                        />
+                    </td>
+                    <td>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => onSave(dayName, { start_time: start, end_time: end, is_active: active })}
+                        >
+                            Сохранить
+                        </button>
+                    </td>
+                </tr>
+            );
+        }
+
+        // App
+        function App() {
+            const { token } = React.useContext(AuthContext);
+            return token ? <Dashboard /> : <LoginPage />;
+        }
+
+        // Root
+        function Root() {
+            return (
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+    </script>
+</body>
+</html>

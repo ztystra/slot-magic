@@ -163,6 +163,23 @@ class TestBookings:
         bookings = manager_with_bookings.get_client_bookings(123456789)
         assert len(bookings) == 1
 
+    def test_cancelled_slot_can_be_rebooked(self, manager_with_bookings):
+        """После отмены слот снова доступен другому клиенту."""
+        original = manager_with_bookings.get_client_bookings(123456789)[0]
+        assert manager_with_bookings.cancel_booking(original["id"], 123456789)
+
+        replacement = manager_with_bookings.create_booking(
+            service_id="haircut",
+            date=original["date"],
+            time=original["time"],
+            client_name="Новый клиент",
+            client_phone="79990001122",
+            client_telegram_id=987654321,
+        )
+
+        assert replacement is not None
+        assert replacement["client_name"] == "Новый клиент"
+
     def test_cancel_booking_not_found(self, manager):
         """Отменить несуществующую запись."""
         result = manager.cancel_booking("nonexistent", 123456789)

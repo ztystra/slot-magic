@@ -2,6 +2,20 @@ services:
   bot:
     build: .
     env_file: .env
+    environment:
+      SQLITE_DB_PATH: /app/data/slot_magic.db
     volumes:
       - ./data:/app/data
+    restart: unless-stopped
+
+  admin:
+    build: .
+    command: uvicorn admin.main:create_app --factory --host 0.0.0.0 --port 8000
+    env_file: .env
+    environment:
+      SQLITE_DB_PATH: /app/data/slot_magic.db
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
     restart: unless-stopped

@@ -1,3 +1,6 @@
 python-telegram-bot>=21
 python-dotenv>=1
 sqlalchemy>=2.0
+
+# Dev
+pytest>=7.0
